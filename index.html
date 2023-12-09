@@ -1,0 +1,61 @@
+<html>
+
+<body>
+    <h1>Hello</h1>
+</body>
+<script>
+    // Check for browser support
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Request access to the microphone
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function (stream) {
+                // Create an audio context
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Create an audio input from the microphone
+                const microphone = audioContext.createMediaStreamSource(stream);
+
+                // Create a stereo channel splitter
+                const splitter = audioContext.createChannelSplitter(2);
+
+                // Connect the microphone to the splitter
+                microphone.connect(splitter);
+
+                // Register the audio worklet processor
+                audioContext.audioWorklet.addModule('audio-processor.js')
+                    .then(() => {
+                        // Create an audio worklet node
+                        const workletNode = new AudioWorkletNode(audioContext, 'your-processor');
+
+                        workletNode.port.onmessage = function (event) {
+                            const message = event.data;
+                            document.body.classList.add("red")
+                            setTimeout(() => {
+                                document.body.classList.remove("red")
+                            }, 1000)
+                        };
+                        // Connect the splitter to the worklet node
+                        splitter.connect(workletNode);
+
+                        // Connect the worklet node to the audio context's destination (output)
+                        workletNode.connect(audioContext.destination);
+                    })
+                    .catch((error) => {
+                        console.error('Error adding audio worklet module:', error);
+                    });
+            })
+            .catch(function (err) {
+                console.error('Error accessing microphone:', err);
+            });
+    } else {
+        console.error('getUserMedia not supported on your browser');
+    }
+</script>
+
+<style>
+    .red {
+        background-color: rgb(221, 56, 56);
+    }
+</style>
+
+</html>
